@@ -1,3 +1,5 @@
 *.js
 *.json
 *.map
+.idea
+node_modules
