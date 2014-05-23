@@ -81,14 +81,25 @@ aboveOrBelow = (item) ->
     return sign((85-0)*(item.pos.y-0) - (75-0)*(item.pos.x-0))
 
 if not @this.strategies
-    @gatherer = 'peon'
-    @healer = 'shaman'
-    @tank = 'ogre'
-    @trash = 'munchkin'
-    @attack = 'fangrider'
+    ogres = true
+    if ogres is true
+        @gatherer = 'peon'
+        @healer = 'shaman'
+        @tank = 'ogre'
+        @trash = 'munchkin'
+        @attack = 'fangrider'
 
-    @enemyGatherer = 'peasant'
-    @enemyTrash = 'soldier'
+        @enemyGatherer = 'peasant'
+        @enemyTrash = 'soldier'
+    else
+        @gatherer = 'peasant'
+        @healer = 'soldier'
+        @tank = 'knight'
+        @trash = 'librarian'
+        @attack = 'griffin-rider'
+
+        @enemyGatherer = 'peon'
+        @enemyTrash = 'munchkin'
 
 items = base.getItems()
 peons = base.getByType @gatherer
