@@ -155,7 +155,7 @@ if not this.strategies
     #    return getUnitByType(soldier, enemies)
 
     this.strategies.push peonStrategy
-    this.strategies.push peonStrategy
+    #this.strategies.push peonStrategy
     this.strategies.push thirdPeonStrategy
     #this.strategies.push doubleTrashStrategy
     #this.strategies.push tankHealerStrategy
