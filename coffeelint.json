@@ -1,0 +1,12 @@
+{
+    "no_tabs": {
+        "level": "error"
+    },
+    "indentation": {
+        "value": 4,
+        "level": "error"
+    },
+    "max_line_length": {
+        "value": 95
+    }
+}
