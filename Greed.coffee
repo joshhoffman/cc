@@ -156,6 +156,7 @@ if not this.strategies
 
     this.strategies.push peonStrategy
     this.strategies.push peonStrategy
+    this.strategies.push thirdPeonStrategy
     #this.strategies.push doubleTrashStrategy
     #this.strategies.push tankHealerStrategy
     #this.strategies.push trashHealerStrategy
