@@ -29,12 +29,12 @@ friendToHeal = getLowHealth friends
 archer = getUnitByType 'archer', friends?
 archer = archer?[0]
 
-if enemy and @canCast 'slow', enemy
+if archer and @canCast 'haste', archer
+    @castHaste archer
+else if enemy and @canCast 'slow', enemy
     @castSlow enemy
 else if friendToHeal and @canCast 'regen', friendToHeal
     @castRegen friendToHeal
-else if archer and @canCast 'haste', archer
-    @castHaste archer
 else
     @attack enemy
 

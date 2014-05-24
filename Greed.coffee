@@ -32,6 +32,7 @@ removeFromArray = (obj, arr) ->
 
 getUnitByType = (unitType, unitsToSearch) ->
     ret = []
+    #ret.push t for t in unitsToSearch when entry.type is unitType
     for entry in unitsToSearch
         do(entry) ->
             ret.push(entry) if entry.type is unitType
