@@ -5,10 +5,10 @@
 // Check out the green Guide button at the top for more info.
 ###
 
-# TODO:
-# Add conditions to strategies. Conditions onlyfire if they resolve to true
-# Check the closest coint location for enemy peons. If one of my peons is closer
+# TODO: Check the closest coin location for enemy peons. If one of my peons is closer
 #  send him after that coin to block the enemy from picking it up
+
+testsEnabled = true
 
 base = this
 
@@ -21,11 +21,11 @@ determineGoldCost = (units) ->
 
 removeFromArray = (obj, arr) ->
     count = 0
-    this.arr = arr
-    for item in arr
+    @arr = arr
+    arr = for item in arr
         do (item) ->
             if item.pos.x is obj.pos.x and item.pos.y is obj.pos.y
-                this.arr.slice(count)
+                @arr.slice(count)
                 count++
                 return arr
     return arr
@@ -39,14 +39,14 @@ getUnitByType = (unitType, unitsToSearch) ->
     return ret
 
 isTargeted = (gatherers, item) ->
-    for gatherer in gatherers
+    val = for gatherer in gatherers
         do(gatherer) ->
             if gatherer.targetPos?
                 if gatherer.targetPos.x is item.pos.x
                     if gatherer.targetPos.y is item.pos.y
                         #base.say 'true'
                         return true
-    return false
+    return val == true
 
 pruneItems = (myGatherers, enemyGatherers, itemsToSearch) ->
     ret = []
@@ -62,11 +62,12 @@ findClosestUnit = (targetUnit, unitsToSearch) ->
     ret = null
     for entry in unitsToSearch
         do(entry) ->
-            dist = @targetUnit.distance entry
+            dist = targetUnit.distance entry
             if dist <= min
                 min = dist
                 ret = entry
-    return entry
+                return
+    return ret
 
 sign = (x) ->
     return (x > 0) - (x < 0)
@@ -80,15 +81,15 @@ findAndMoveToItem = (peon, itemsToSearch) ->
 
 
 getStrategy = (strats) ->
-    for s in strats
+    ret = for s in strats
         do (s) ->
             totalCost = determineGoldCost s.getUnits()
             if base.gold >= totalCost and s.evaluateCondition() == true
                 return s
-    return null
+    return ret
 
 aboveOrBelow = (item) ->
-    return sign((85-0)*(item.pos.y-0) - (75-0)*(item.pos.x-0))
+    return sign((85)*(item.pos.y) - (75)*(item.pos.x-0))
 
 if not @strategies
     ogres = false
@@ -133,7 +134,6 @@ enemyGatherer = 'peon'
 
 # Setup strategies
 if not @strategies
-
     peonStrategyUnits = [@gatherer]
     munchkinStrategyUnits = [@trash]
     tankHealerStrategyUnits = [@tank, @healer, @trash]
@@ -156,12 +156,12 @@ if not @strategies
             return @evalFunc()
 
         getUnits: () ->
-            return @units
+            return @units.slice()
 
     peonStrategy = new Strategy peonStrategyUnits, () ->
         return numPeons < 2
     thirdPeonStrategy = new Strategy peonStrategyUnits, () ->
-        return numEnemyPeons >= 3
+        return numEnemyPeons >= 3 and numPeons < 3
     trashStrategy = new Strategy munchkinStrategyUnits, () ->
         return numPeons >= 2
     #doubleTrashStrategy doubleTrashStrategyUnits, () ->
@@ -205,6 +205,7 @@ else if numPeons > 1
                 # send all later peons everywhere
                 # items = top.concat bottom
                 items = findAndMoveToItem peon, items
+                return
             else
                 #divide the first two between top and bottom
                 useTop = if myTopIndex == count then true else false
@@ -214,6 +215,7 @@ else if numPeons > 1
                     top = findAndMoveToItem peon, top
                 else
                     bottom = findAndMoveToItem peon, bottom
+                return
 
 currentStrategy = null
 totalCost = 0
@@ -228,11 +230,11 @@ else
     usingDefault = true
 ###
 
-if not @building
+if not @building or @building == null
     currentStrategy = getStrategy @strategies
 
-if currentStrategy?
-    u = currentStrategy.units.slice()
+if currentStrategy != null
+    u = currentStrategy.getUnits()
     toBuild = u.splice(0, 1)
     @building = if u.length > 0 then u else null
 
@@ -254,7 +256,6 @@ else if not usingDefault
 
 
 currentStrategy = null
-
 
 
 
