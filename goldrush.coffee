@@ -4,9 +4,7 @@ getNearest = (itemsToSearch) ->
     #@say itemsToSearch.length
     #this.say 'test2'
     if itemsToSearch? or itemsToSearch.length == 0
-        this.say 'null2' if itemsToSearch?
         return null
-    @say 'test'
     for e in itemsToSearch
         do (e) ->
             dist = @distance(e)
@@ -18,7 +16,7 @@ getNearest = (itemsToSearch) ->
 dude = this
 items2 = this.getItems()
 #this.say items.length
-this.say 'null' if not items2?
+#this.say 'null' if not items2?
 #items = getNearest items2 if items2?
 items = @getItems()
 nearest = 9001
@@ -29,7 +27,7 @@ for e in items
         if dist < nearest and e.bountyGold > 1
             nearest = dist
             nearestItem = e
-if nearestItem and items?.length > 0
+if nearestItem
     this.move(nearestItem.pos)
 ###
 // This code runs once per frame. Choose where to move to grab gold!
