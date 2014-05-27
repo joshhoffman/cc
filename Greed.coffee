@@ -16,7 +16,7 @@ determineGoldCost = (units) ->
     totalCost = 0
     for e in units
         do(e) ->
-            totalCost += base.buildables[e].goldCost
+            totalCost += base.buildables[e]?.goldCost
     return totalCost
 
 removeFromArray = (obj, arr) ->
@@ -62,7 +62,7 @@ findClosestUnit = (targetUnit, unitsToSearch) ->
     ret = null
     for entry in unitsToSearch
         do(entry) ->
-            dist = this.targetUnit.distance entry
+            dist = @targetUnit.distance entry
             if dist <= min
                 min = dist
                 ret = entry
@@ -78,11 +78,20 @@ findAndMoveToItem = (peon, itemsToSearch) ->
         return removeFromArray(item, itemsToSearch)
     return itemsToSearch
 
+
+getStrategy = (strats) ->
+    for s in strats
+        do (s) ->
+            totalCost = determineGoldCost s.getUnits()
+            if base.gold >= totalCost and s.evaluateCondition() == true
+                return s
+    return null
+
 aboveOrBelow = (item) ->
     return sign((85-0)*(item.pos.y-0) - (75-0)*(item.pos.x-0))
 
-if not @this.strategies
-    ogres = true
+if not @strategies
+    ogres = false
     if ogres is true
         @gatherer = 'peon'
         @healer = 'shaman'
@@ -123,7 +132,7 @@ enemyGatherer = 'peon'
 
 
 # Setup strategies
-if not this.strategies
+if not @strategies
 
     peonStrategyUnits = [@gatherer]
     munchkinStrategyUnits = [@trash]
@@ -138,26 +147,29 @@ if not this.strategies
         @trash, @trash, @trash,
         @healer, @healer]
 
-    this.strategies = []
+    @strategies = []
 
     class Strategy
-        constructor: (@units, @eval) ->
+        constructor: (@units, @evalFunc) ->
 
-        evaluate: () ->
-            @eval()
+        evaluateCondition: () ->
+            return @evalFunc()
+
+        getUnits: () ->
+            return @units
 
     peonStrategy = new Strategy peonStrategyUnits, () ->
         return numPeons < 2
-    thirdPeonStrategy = new Strategy peonStrategyUnits () ->
+    thirdPeonStrategy = new Strategy peonStrategyUnits, () ->
         return numEnemyPeons >= 3
-    trashStrategy = new Strategy trashStrategy () ->
-        return true
+    trashStrategy = new Strategy munchkinStrategyUnits, () ->
+        return numPeons >= 2
     #doubleTrashStrategy doubleTrashStrategyUnits, () ->
     #    return getUnitByType(soldier, enemies)
 
-    this.strategies.push peonStrategy
+    @strategies.push peonStrategy
     #this.strategies.push peonStrategy
-    this.strategies.push thirdPeonStrategy
+    @strategies.push thirdPeonStrategy
     #this.strategies.push doubleTrashStrategy
     #this.strategies.push tankHealerStrategy
     #this.strategies.push trashHealerStrategy
@@ -191,7 +203,7 @@ else if numPeons > 1
         do(peon) ->
             if count >= 2
                 # send all later peons everywhere
-                items = top.concat bottom
+                # items = top.concat bottom
                 items = findAndMoveToItem peon, items
             else
                 #divide the first two between top and bottom
@@ -217,14 +229,9 @@ else
 ###
 
 if not @building
-    for s in @strategies
-        do(s) ->
-            totalCost = determineTotalCost s.units
-            if base.gold >= totalCost and s.eval() == true
-                currentStrategy = s
-                break
+    currentStrategy = getStrategy @strategies
 
-if not currentStrategy?
+if currentStrategy?
     u = currentStrategy.units.slice()
     toBuild = u.splice(0, 1)
     @building = if u.length > 0 then u else null

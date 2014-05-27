@@ -2,7 +2,8 @@ module.exports = function(grunt) {
     // load plugins
     [
         'grunt-contrib-coffee',
-        'grunt-coffeelint'
+        'grunt-coffeelint',
+        'grunt-contrib-watch'
     ].forEach(function(task) {
             grunt.loadNpmTasks(task);
         });
@@ -29,14 +30,14 @@ module.exports = function(grunt) {
                     '*.coffee'
                 ],
                 tasks: [
-                    'coffeelint'//,
-                    //'coffee'
+                    'coffeelint',
+                    'coffee'
                 ]
             }
         }
     });
 
     //grunt.registerTask('default', ['cafemocha', 'jshint', 'less', 'notify:cafemocha'])
-    //grunt.registerTask('default', ['coffee', 'coffeelint'])
-    grunt.registerTask('default', ['coffeelint'])
+    grunt.registerTask('default', ['coffee', 'coffeelint'])
+    //grunt.registerTask('default', ['coffeelint'])
 };
