@@ -8,13 +8,13 @@ module.exports = function(grunt) {
         });
 
     grunt.initConfig({
-        /*coffee: {
+        coffee: {
             compile: {
                 files: {
-                    'Greed.js': 'Greed.coffee'
+                    'GreedCoffee.js': 'Greed.coffee'
                 }
             }
-        },*/
+        },
         coffeelint: {
             options: {
                 configFile: 'coffeelint.json'
@@ -39,4 +39,4 @@ module.exports = function(grunt) {
     //grunt.registerTask('default', ['cafemocha', 'jshint', 'less', 'notify:cafemocha'])
     //grunt.registerTask('default', ['coffee', 'coffeelint'])
     grunt.registerTask('default', ['coffeelint'])
-}
+};
