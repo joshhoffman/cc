@@ -28,6 +28,13 @@ removeFromArray = (obj, arr) ->
             #break
     return @arr
 
+# This function is cleaner than the old way, but it seems to crash the editor
+###
+removeFromArray = (obj, arr) ->
+    return arr.filter (x) ->
+        x.pos.x is not obj.pos.x and x.pos.y is not obj.pos.y
+###
+
 getUnitByType = (unitType, unitsToSearch) ->
     ret = []
     #ret.push t for t in unitsToSearch when entry.type is unitType
@@ -76,14 +83,14 @@ findAndMoveToItem = (peon, itemsToSearch) ->
 getStrategy = (strats) ->
     ret = null
     for s in strats
-        totalCost = determineGoldCost s.getUnits()
+        totalCost = determineGoldCost s.getUnitArray()
         if base.gold >= totalCost and s.evaluateCondition() == true
-            ret = s
+            ret = s.getUnitArray();
             break
     return ret
 
 aboveOrBelow = (item) ->
-    return sign((85)*(item.pos.y) - (75)*(item.pos.x-0))
+    return sign((85)*(item.pos.y) - (75)*(item.pos.x))
 
 if not @strategies
     ogres = false
@@ -127,8 +134,19 @@ enemyGatherer = 'peon'
 
 
 # Setup strategies
+
+
+class Strategy
+    constructor: (@units, @evalFunc) ->
+
+    evaluateCondition: () ->
+        return @evalFunc()
+
+    getUnitArray: ->
+        return @units.slice()
+
 if not @strategies
-    peonStrategyUnits = [@gatherer]
+    peonStrategyUnits = []
     munchkinStrategyUnits = [@trash]
     tankHealerStrategyUnits = [@tank, @healer, @trash]
     healerStrategyUnits = [@healer]
@@ -141,17 +159,11 @@ if not @strategies
         @trash, @trash, @trash,
         @healer, @healer]
 
+    peonStrategyUnits.push @gatherer
+
     @strategies = []
 
-    class Strategy
-        constructor: (@units, @evalFunc) ->
-
-        evaluateCondition: () ->
-            return @evalFunc()
-
-        getUnits: () ->
-            return @units.slice()
-
+    # TODO: functions are closures. Need to pass them in values...
     peonStrategy = new Strategy peonStrategyUnits, () ->
         return numPeons < 2
     thirdPeonStrategy = new Strategy peonStrategyUnits, () ->
@@ -162,8 +174,9 @@ if not @strategies
     #    return getUnitByType(soldier, enemies)
 
     @strategies.push peonStrategy
+    @strategies.push trashStrategy
     #this.strategies.push peonStrategy
-    @strategies.push thirdPeonStrategy
+    #@strategies.push thirdPeonStrategy
     #this.strategies.push doubleTrashStrategy
     #this.strategies.push tankHealerStrategy
     #this.strategies.push trashHealerStrategy
@@ -222,12 +235,12 @@ else
 ###
 
 if not @building or @building == null
-    currentStrategy = getStrategy @strategies
+    @currentStrategy = getStrategy @strategies
 
-if currentStrategy != null
-    u = currentStrategy.getUnits()
-    toBuild = u.splice(0, 1)
-    @building = if u.length > 0 then u else null
+if @currentStrategy != null
+    toBuild = @currentStrategy.splice(0, 1)
+    toBuild = toBuild[0] if toBuild
+    @building = if @currentStrategy.length > 0 then @currentStrategy else null
 
     base.build toBuild if toBuild and toBuild != ''
 
