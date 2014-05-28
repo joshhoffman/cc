@@ -15,58 +15,51 @@ base = this
 determineGoldCost = (units) ->
     totalCost = 0
     for e in units
-        do(e) ->
-            totalCost += base.buildables[e]?.goldCost
+        totalCost += base.buildables[e]?.goldCost
     return totalCost
 
 removeFromArray = (obj, arr) ->
     count = 0
     @arr = arr
     arr = for item in arr
-        do (item) ->
-            if item.pos.x is obj.pos.x and item.pos.y is obj.pos.y
-                @arr.slice(count)
-                count++
-                return arr
-    return arr
+        if item.pos.x is obj.pos.x and item.pos.y is obj.pos.y
+            @arr.slice(count)
+            count++
+            #break
+    return @arr
 
 getUnitByType = (unitType, unitsToSearch) ->
     ret = []
     #ret.push t for t in unitsToSearch when entry.type is unitType
     for entry in unitsToSearch
-        do(entry) ->
-            ret.push(entry) if entry.type is unitType
+        ret.push(entry) if entry.type is unitType
     return ret
 
 isTargeted = (gatherers, item) ->
-    val = for gatherer in gatherers
-        do(gatherer) ->
-            if gatherer.targetPos?
-                if gatherer.targetPos.x is item.pos.x
-                    if gatherer.targetPos.y is item.pos.y
-                        #base.say 'true'
-                        return true
-    return val == true
+    for gatherer in gatherers
+        if gatherer.targetPos?
+            if gatherer.targetPos.x is item.pos.x
+                if gatherer.targetPos.y is item.pos.y
+                    #base.say 'true'
+                    return true
+    return false
 
 pruneItems = (myGatherers, enemyGatherers, itemsToSearch) ->
     ret = []
     for item in itemsToSearch
-        do(item) ->
-            if isTargeted(myGatherers, item) is false
-                if isTargeted(enemyGatherers, item) is false
-                    ret.push item
+        if isTargeted(myGatherers, item) is false
+            if isTargeted(enemyGatherers, item) is false
+                ret.push item
     return ret
 
 findClosestUnit = (targetUnit, unitsToSearch) ->
     min = 9001
     ret = null
     for entry in unitsToSearch
-        do(entry) ->
-            dist = targetUnit.distance entry
-            if dist <= min
-                min = dist
-                ret = entry
-                return
+        dist = targetUnit.distance entry
+        if dist <= min
+            min = dist
+            ret = entry
     return ret
 
 sign = (x) ->
@@ -81,11 +74,12 @@ findAndMoveToItem = (peon, itemsToSearch) ->
 
 
 getStrategy = (strats) ->
-    ret = for s in strats
-        do (s) ->
-            totalCost = determineGoldCost s.getUnits()
-            if base.gold >= totalCost and s.evaluateCondition() == true
-                return s
+    ret = null
+    for s in strats
+        totalCost = determineGoldCost s.getUnits()
+        if base.gold >= totalCost and s.evaluateCondition() == true
+            ret = s
+            break
     return ret
 
 aboveOrBelow = (item) ->
@@ -192,30 +186,27 @@ else if numPeons > 1
     bottom = []
 
     for item in items
-        do(item) ->
-            above = aboveOrBelow item
-            top.push item if above >= 0
-            bottom.push item if above < 0
+        above = aboveOrBelow item
+        top.push item if above >= 0
+        bottom.push item if above < 0
 
     count = 0
     useTop = false
     for peon in peons
-        do(peon) ->
-            if count >= 2
-                # send all later peons everywhere
-                # items = top.concat bottom
-                items = findAndMoveToItem peon, items
-                return
+        if count >= 2
+            # send all later peons everywhere
+            # items = top.concat bottom
+            items = findAndMoveToItem peon, items
+            return
+        else
+            #divide the first two between top and bottom
+            useTop = if myTopIndex == count then true else false
+            count++
+            if useTop is true
+                #base.say 'top'
+                top = findAndMoveToItem peon, top
             else
-                #divide the first two between top and bottom
-                useTop = if myTopIndex == count then true else false
-                count++
-                if useTop is true
-                    #base.say 'top'
-                    top = findAndMoveToItem peon, top
-                else
-                    bottom = findAndMoveToItem peon, bottom
-                return
+                bottom = findAndMoveToItem peon, bottom
 
 currentStrategy = null
 totalCost = 0
