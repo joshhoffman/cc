@@ -47,7 +47,7 @@ isTargeted = (gatherers, item) ->
         if gatherer.targetPos?
             if gatherer.targetPos.x is item.pos.x
                 if gatherer.targetPos.y is item.pos.y
-                    #base.say 'true'
+                    base.say 'true'
                     return true
     return false
 
@@ -56,7 +56,8 @@ pruneItems = (myGatherers, enemyGatherers, itemsToSearch) ->
     for item in itemsToSearch
         if isTargeted(myGatherers, item) is false
             if isTargeted(enemyGatherers, item) is false
-                ret.push item
+                if item.bountyGold > 1
+                    ret.push item
     return ret
 
 findClosestUnit = (targetUnit, unitsToSearch) ->
@@ -76,7 +77,7 @@ findAndMoveToItem = (peon, itemsToSearch) ->
     item = peon.getNearest itemsToSearch
     if item
         base.command peon, 'move', item.pos
-        return removeFromArray(item, itemsToSearch)
+        #return removeFromArray(item, itemsToSearch)
     return itemsToSearch
 
 
@@ -84,8 +85,11 @@ getStrategy = (strats) ->
     ret = null
     for s in strats
         totalCost = determineGoldCost s.getUnitArray()
-        if base.gold >= totalCost and s.evaluateCondition() == true
-            ret = s.getUnitArray();
+        if s.evaluateCondition(base) == true
+            # if we have a strategy we need to use, but not enough gold
+            # then stop searching
+            if base.gold >= totalCost
+                ret = s.getUnitArray()
             break
     return ret
 
@@ -105,9 +109,9 @@ if not @strategies
         @enemyTrash = 'soldier'
     else
         @gatherer = 'peasant'
-        @healer = 'soldier'
+        @healer = 'librarian'
         @tank = 'knight'
-        @trash = 'librarian'
+        @trash = 'soldier'
         @attack = 'griffin-rider'
 
         @enemyGatherer = 'peon'
@@ -118,8 +122,13 @@ peons = base.getByType @gatherer
 enemyPeons = base.getByType @enemyGatherer
 enemies = base.getEnemies()
 
+items = pruneItems [], enemyPeons, items
+
 numPeons = peons.length
 numEnemyPeons = enemyPeons.length
+
+base.numPeons = numPeons
+base.numEnemyPeons = numEnemyPeons
 
 ###
 var gatherer = 'peasant';
@@ -135,19 +144,9 @@ enemyGatherer = 'peon'
 
 # Setup strategies
 
-
-class Strategy
-    constructor: (@units, @evalFunc) ->
-
-    evaluateCondition: () ->
-        return @evalFunc()
-
-    getUnitArray: ->
-        return @units.slice()
-
 if not @strategies
     peonStrategyUnits = []
-    munchkinStrategyUnits = [@trash]
+    trashStrategyUnits = [@trash]
     tankHealerStrategyUnits = [@tank, @healer, @trash]
     healerStrategyUnits = [@healer]
     attackStrategyUnits = [@attack]
@@ -163,21 +162,30 @@ if not @strategies
 
     @strategies = []
 
+    class Strategy
+        constructor: (@units, @evalFunc) ->
+
+        evaluateCondition: (nbase) ->
+            return @evalFunc(nbase)
+
+        getUnitArray: () ->
+            return @units.slice()
+
     # TODO: functions are closures. Need to pass them in values...
-    peonStrategy = new Strategy peonStrategyUnits, () ->
-        return numPeons < 2
-    thirdPeonStrategy = new Strategy peonStrategyUnits, () ->
-        return numEnemyPeons >= 3 and numPeons < 3
-    trashStrategy = new Strategy munchkinStrategyUnits, () ->
-        return numPeons >= 2
-    #doubleTrashStrategy doubleTrashStrategyUnits, () ->
-    #    return getUnitByType(soldier, enemies)
+    peonStrategy = new Strategy peonStrategyUnits, (lbase) ->
+        return lbase.numPeons < 2
+    thirdPeonStrategy = new Strategy peonStrategyUnits, (lbase) ->
+        return lbase.numEnemyPeons >= 3 and lbase.numPeons < 3
+    trashStrategy = new Strategy trashStrategyUnits, (lbase) ->
+        return lbase.numPeons >= 2
+    doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, (lbase) ->
+        return lbase.numPeons >= 2
 
     @strategies.push peonStrategy
-    @strategies.push trashStrategy
+    @strategies.push thirdPeonStrategy
+    #@strategies.push trashStrategy
     #this.strategies.push peonStrategy
-    #@strategies.push thirdPeonStrategy
-    #this.strategies.push doubleTrashStrategy
+    this.strategies.push doubleTrashStrategy
     #this.strategies.push tankHealerStrategy
     #this.strategies.push trashHealerStrategy
 
@@ -209,8 +217,8 @@ else if numPeons > 1
         if count >= 2
             # send all later peons everywhere
             # items = top.concat bottom
+            items = pruneItems peons.slice().splice(0, 2), [], items
             items = findAndMoveToItem peon, items
-            return
         else
             #divide the first two between top and bottom
             useTop = if myTopIndex == count then true else false
@@ -221,9 +229,7 @@ else if numPeons > 1
             else
                 bottom = findAndMoveToItem peon, bottom
 
-currentStrategy = null
 totalCost = 0
-usingDefault = false
 
 # Determine if there is still a strategy left to use. If not, use default
 ###
