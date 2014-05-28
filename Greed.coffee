@@ -47,7 +47,6 @@ isTargeted = (gatherers, item) ->
         if gatherer.targetPos?
             if gatherer.targetPos.x is item.pos.x
                 if gatherer.targetPos.y is item.pos.y
-                    base.say 'true'
                     return true
     return false
 
@@ -129,6 +128,7 @@ numEnemyPeons = enemyPeons.length
 
 base.numPeons = numPeons
 base.numEnemyPeons = numEnemyPeons
+base.numEnemies = enemies.length - numEnemyPeons
 
 ###
 var gatherer = 'peasant';
@@ -180,14 +180,18 @@ if not @strategies
         return lbase.numPeons >= 2
     doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, (lbase) ->
         return lbase.numPeons >= 2
+    trashHealerStrategy = new Strategy trashHealerStrategyUnits, (lbase) ->
+        return lbase.numEnemies < 3
+    tankHealerStrategy = new Strategy tankHealerStrategyUnits, (lbase) ->
+        return lbase.numEnemies >= 3 and lbase.numEnemies < 5
 
     @strategies.push peonStrategy
     @strategies.push thirdPeonStrategy
     #@strategies.push trashStrategy
     #this.strategies.push peonStrategy
-    this.strategies.push doubleTrashStrategy
-    #this.strategies.push tankHealerStrategy
-    #this.strategies.push trashHealerStrategy
+    @strategies.push trashHealerStrategy
+    @strategies.push tankHealerStrategy
+    @strategies.push doubleTrashStrategy
 
     @defaultStrategy = trashStrategy
 
