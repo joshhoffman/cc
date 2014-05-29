@@ -187,7 +187,7 @@ enemyGatherer = 'peon'
 if not @strategies
     peonStrategyUnits = [@gatherer]
     trashStrategyUnits = [@trash]
-    tankHealerTrashStrategyUnits = [@tank, @healer, @trash]
+    tankHealerTrashStrategyUnits = [@tank, @tank, @trash, @healer]
     tankHealerStrategyUnits = [@tank, @healer]
     healerStrategyUnits = [@healer]
     attackStrategyUnits = [@attack]
@@ -251,11 +251,11 @@ if not @strategies
 
     # Spawn two trash if the enemy has sent out a couple dudes
     doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, "double trash", (lbase) ->
-        return lbase.numPeons >= 2 and lbase.numEnemyTrash < 3 and lbase.numFriends is 0
+        return lbase.numPeons >= 2 and 1 <= lbase.numEnemyTrash < 3 and lbase.numFriends is 0
 
     # defend against spamming tanks
     tankSpamDefenseStrategy = new Strategy tankHealerStrategyUnits, "tank spam defense", (lbase) ->
-        return lbase.numPeons >= 2 and 1 < lbase.numEnemyTank < 3 and lbase.numFriends < 3
+        return lbase.numPeons >= 2 and lbase.numEnemyTank < 3 and lbase.numFriends < 3
 
     # spawn a bunch of dudes if the enemy doesn't have a ton of dudes
     trashHealerStrategy = new Strategy trashHealerStrategyUnits, "trash healer", (lbase) ->
