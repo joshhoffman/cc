@@ -36,6 +36,9 @@ if not @strategies
 
         @enemyGatherer = 'peasant'
         @enemyTrash = 'soldier'
+        @enemyHealer = 'librarian'
+        @enemyTank = 'knight'
+        @enemyAttack = 'griffin-rider'
     else
         @gatherer = 'peasant'
         @healer = 'librarian'
@@ -45,6 +48,9 @@ if not @strategies
 
         @enemyGatherer = 'peon'
         @enemyTrash = 'munchkin'
+        @enemyHealer = 'shaman'
+        @enemyTank = 'ogre'
+        @enemyAttack = 'fangrider'
 
 
 
@@ -100,6 +106,8 @@ getUnitByType = (unitType, unitsToSearch) ->
 items = base.getItems()
 peons = base.getByType @gatherer
 enemyPeons = base.getByType @enemyGatherer
+enemyTrash = base.getByType @enemyTrash
+enemyTank = base.getByType @enemyTank
 enemies = base.getEnemies()
 friends = base.getFriends()
 
@@ -110,6 +118,8 @@ base.numEnemyPeons = enemyPeons.length
 
 base.numFriends = friends.length - base.numPeons
 base.numEnemies = enemies.length - base.numEnemyPeons
+base.numEnemyTank = enemyTank.length
+base.numEnemyTrash = enemyTrash.length
 
 
 
@@ -211,6 +221,10 @@ if not @strategies
         getMyName: () ->
             return @myName
 
+    # If we're winning the rush, spawn another peon
+    successfullRushPeon = new Strategy peonStrategyUnits, "successful rush", (lbase) ->
+        return lbase.numFriends > lbase.numEnemies and lbase.numPeons is 1
+
     # defend against the rush
     rushStrategy = new Strategy tankHealerStrategyUnits, "rush", (lbase) ->
         return lbase.numPeons <= 2 and lbase.numEnemies >= 2
@@ -225,7 +239,7 @@ if not @strategies
 
     # Create a fourth peon if the enemy has four and I have lTrashStrategyUnitsess than 4
     fourthPeonStrategy = new Strategy peonStrategyUnits, "fourth peon", (lbase) ->
-        return lbase.numEnemyPeons >= 4 and lbase.numPeons is 3
+        return lbase.numEnemyPeons > lbase.numPeons and lbase.numPeons < 5
 
     # If they haven't spawned anything, and it's been a long enough time... fuck it, go all out
     ballerStrategy = new Strategy ballerStrategyUnits, "baller", (lbase) ->
@@ -237,14 +251,18 @@ if not @strategies
 
     # Spawn two trash if the enemy has sent out a couple dudes
     doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, "double trash", (lbase) ->
-        return lbase.numPeons >= 2 and 1 < lbase.numEnemies < 3 and lbase.numFriends is 0
+        return lbase.numPeons >= 2 and 1 < lbase.numEnemyTrash < 3 and lbase.numFriends is 0
+
+    # defend against spamming tanks
+    tankSpamDefenseStrategy = new Strategy tankHealerStrategyUnits, "tank spam defense", (lbase) ->
+        return lbase.numPeons >= 2 and 1 < lbase.numEnemyTank < 3 and lbase.numFriends < 3
 
     # spawn a bunch of dudes if the enemy doesn't have a ton of dudes
     trashHealerStrategy = new Strategy trashHealerStrategyUnits, "trash healer", (lbase) ->
         return 5 < lbase.numEnemies < 9
 
     # Spawn a tank and a healer if the enemy has a small number of units
-    tankHealerTrashStrategy = new Strategy tankHealerTrashStrategyUnits, "tank healer", (lbase) ->
+    tankHealerTrashStrategy = new Strategy tankHealerTrashStrategyUnits, "tank healer trash", (lbase) ->
         return lbase.numEnemies >= 3 and lbase.numEnemies < 6
 
     # Spawn an attack unit if I already have a lot on the field
@@ -255,6 +273,7 @@ if not @strategies
     attackHealerStrategy = new Strategy attackHealerStrategyUnits, "attack healer", (lbase) ->
         return lbase.numFriends >= 8
 
+    @strategies.push successfullRushPeon
     @strategies.push rushStrategy
     @strategies.push peonStrategy
     @strategies.push thirdPeonStrategy
@@ -265,6 +284,7 @@ if not @strategies
     @strategies.push attackStrategy
     @strategies.push trashHealerStrategy
     @strategies.push tankHealerTrashStrategy
+    @strategies.push tankSpamDefenseStrategy
     @strategies.push doubleTrashStrategy
 
 
@@ -343,7 +363,10 @@ else #numPeons >= 4
 
     count = 0
     for peon in peons
-        findAndMoveToItem peon, itemSet[count]
+        if count >= 4
+            findAndMoveToItem peon, items
+        else
+            findAndMoveToItem peon, itemSet[count]
         count++
 
 totalCost = 0
