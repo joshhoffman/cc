@@ -5,18 +5,15 @@
 // Check out the green Guide button at the top for more info.
 ###
 
+# -----------------------------------
+# CODE IS COMPILED FROM COFFEESCRIPT
+# -----------------------------------
+
 # TODO: Check the closest coin location for enemy peons. If one of my peons is closer
 #  send him after that coin to block the enemy from picking it up
 
-testsEnabled = true
-
 base = this
-
-determineGoldCost = (units) ->
-    totalCost = 0
-    for e in units
-        totalCost += base.buildables[e]?.goldCost
-    return totalCost
+base.myTime = base.now()
 
 removeFromArray = (obj, arr) ->
     count = 0
@@ -42,21 +39,26 @@ getUnitByType = (unitType, unitsToSearch) ->
         ret.push(entry) if entry.type is unitType
     return ret
 
-isTargeted = (gatherers, item) ->
+
+getTargeted = (gatherers, item) ->
     for gatherer in gatherers
         if gatherer.targetPos?
             if gatherer.targetPos.x is item.pos.x
                 if gatherer.targetPos.y is item.pos.y
-                    return true
-    return false
+                    return gatherer
+    return null
+
+isTargeted = (gatherers, item) ->
+    return getTargeted(gatherers, item) is not null
 
 pruneItems = (myGatherers, enemyGatherers, itemsToSearch) ->
     ret = []
     for item in itemsToSearch
-        if isTargeted(myGatherers, item) is false
-            if isTargeted(enemyGatherers, item) is false
-                if item.bountyGold > 1
-                    ret.push item
+        for myGatherer in myGatherers
+            targeted = getTargeted(enemyGatherers, item)
+            if not targeted? or targeted.distance(item) > myGatherer.distance(item)
+                #if item.bountyGold > 1
+                ret.push item
     return ret
 
 findClosestUnit = (targetUnit, unitsToSearch) ->
@@ -79,6 +81,11 @@ findAndMoveToItem = (peon, itemsToSearch) ->
         #return removeFromArray(item, itemsToSearch)
     return itemsToSearch
 
+determineGoldCost = (units) ->
+    totalCost = 0
+    for e in units
+        totalCost += base.buildables[e]?.goldCost
+    return totalCost
 
 getStrategy = (strats) ->
     ret = null
@@ -88,6 +95,7 @@ getStrategy = (strats) ->
             # if we have a strategy we need to use, but not enough gold
             # then stop searching
             if base.gold >= totalCost
+                #base.say s.getMyName()
                 ret = s.getUnitArray()
             break
     return ret
@@ -95,7 +103,11 @@ getStrategy = (strats) ->
 aboveOrBelow = (item) ->
     return sign((85)*(item.pos.y) - (75)*(item.pos.x))
 
+# Set up some constants
 if not @strategies
+    @xMid = 42
+    @yMid = 32
+
     ogres = false
     if ogres is true
         @gatherer = 'peon'
@@ -120,15 +132,15 @@ items = base.getItems()
 peons = base.getByType @gatherer
 enemyPeons = base.getByType @enemyGatherer
 enemies = base.getEnemies()
+friends = base.getFriends()
 
-items = pruneItems [], enemyPeons, items
+items = pruneItems peons, enemyPeons, items
 
-numPeons = peons.length
-numEnemyPeons = enemyPeons.length
+base.numPeons = peons.length
+base.numEnemyPeons = enemyPeons.length
 
-base.numPeons = numPeons
-base.numEnemyPeons = numEnemyPeons
-base.numEnemies = enemies.length - numEnemyPeons
+base.numFriends = friends.length - base.numPeons
+base.numEnemies = enemies.length - base.numEnemyPeons
 
 ###
 var gatherer = 'peasant';
@@ -145,7 +157,7 @@ enemyGatherer = 'peon'
 # Setup strategies
 
 if not @strategies
-    peonStrategyUnits = []
+    peonStrategyUnits = [@gatherer]
     trashStrategyUnits = [@trash]
     tankHealerStrategyUnits = [@tank, @healer, @trash]
     healerStrategyUnits = [@healer]
@@ -154,16 +166,22 @@ if not @strategies
     doubleTrashStrategyUnits = [@trash, @trash]
     tripleTrashStrategyUnits = [@trash, @trash, @trash]
     trashHealerStrategyUnits = [
+        @tank, @tank, @trash,
+        @trash, @trash, @trash, @trash,
+        @attack, @healer, @healer]
+    ballerStrategyUnits = [
+        @tank, @tank, @tank,
         @trash, @trash, @trash,
         @trash, @trash, @trash,
-        @healer, @healer]
-
-    peonStrategyUnits.push @gatherer
+        @trash, @trash, @attack,
+        @healer, @healer, @healer
+        @healer, @healer, @healer
+    ]
 
     @strategies = []
 
     class Strategy
-        constructor: (@units, @evalFunc) ->
+        constructor: (@units, @myName, @evalFunc) ->
 
         evaluateCondition: (nbase) ->
             return @evalFunc(nbase)
@@ -171,34 +189,45 @@ if not @strategies
         getUnitArray: () ->
             return @units.slice()
 
-    # TODO: functions are closures. Need to pass them in values...
-    peonStrategy = new Strategy peonStrategyUnits, (lbase) ->
+        getMyName: () ->
+            return @myName
+
+    peonStrategy = new Strategy peonStrategyUnits, "peon", (lbase) ->
         return lbase.numPeons < 2
-    thirdPeonStrategy = new Strategy peonStrategyUnits, (lbase) ->
+    thirdPeonStrategy = new Strategy peonStrategyUnits, "third peon", (lbase) ->
         return lbase.numEnemyPeons >= 3 and lbase.numPeons < 3
-    trashStrategy = new Strategy trashStrategyUnits, (lbase) ->
+    fourthPeonStrategy = new Strategy peonStrategyUnits, "fourth peon", (lbase) ->
+        return lbase.numEnemyPeons >= 4 and lbase.numPeons < 4
+    ballerStrategy = new Strategy ballerStrategyUnits, "baller", (lbase) ->
+        return lbase.numEnemies is 0 and lbase.numFriends is 0 and lbase.myTime > 90.0
+    trashStrategy = new Strategy trashStrategyUnits, "trash", (lbase) ->
         return lbase.numPeons >= 2
-    doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, (lbase) ->
-        return lbase.numPeons >= 2
-    trashHealerStrategy = new Strategy trashHealerStrategyUnits, (lbase) ->
-        return lbase.numEnemies < 3
-    tankHealerStrategy = new Strategy tankHealerStrategyUnits, (lbase) ->
-        return lbase.numEnemies >= 3 and lbase.numEnemies < 5
+    doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, "double trash", (lbase) ->
+        return lbase.numPeons >= 2 and lbase.numEnemies > 1
+    trashHealerStrategy = new Strategy trashHealerStrategyUnits, "trash healer", (lbase) ->
+        return 5 < lbase.numEnemies < 9 and lbase.myTime > 75.0 and lbase.myTime < 90.0
+    tankHealerStrategy = new Strategy tankHealerStrategyUnits, "tank healer", (lbase) ->
+        return lbase.numEnemies >= 3 and lbase.numEnemies < 6
+    attackStrategy = new Strategy attackStrategyUnits, "attack", (lbase) ->
+        return lbase.numFriends >= 5
+    attackHealerStrategy = new Strategy attackHealerStrategyUnits, "attack healer", (lbase) ->
+        return lbase.numFriends >= 8
 
     @strategies.push peonStrategy
     @strategies.push thirdPeonStrategy
-    #@strategies.push trashStrategy
+    @strategies.push fourthPeonStrategy
+    @strategies.push ballerStrategy
     #this.strategies.push peonStrategy
+    @strategies.push attackHealerStrategy
+    @strategies.push attackStrategy
     @strategies.push trashHealerStrategy
     @strategies.push tankHealerStrategy
     @strategies.push doubleTrashStrategy
 
-    @defaultStrategy = trashStrategy
 
-
-if numPeons is 1
+if @numPeons is 1
     findAndMoveToItem peons[0], items
-else if numPeons > 1
+else if @numPeons > 1 and @numPeons < 4
     #loop through all the items, finding top and bottom
 
     if not @myTopIndex?
@@ -221,8 +250,9 @@ else if numPeons > 1
         if count >= 2
             # send all later peons everywhere
             # items = top.concat bottom
-            items = pruneItems peons.slice().splice(0, 2), [], items
+            #items = pruneItems peons.slice().splice(0, count), [], items
             items = findAndMoveToItem peon, items
+            count++
         else
             #divide the first two between top and bottom
             useTop = if myTopIndex == count then true else false
@@ -232,6 +262,26 @@ else if numPeons > 1
                 top = findAndMoveToItem peon, top
             else
                 bottom = findAndMoveToItem peon, bottom
+else #numPeons >= 4
+    topRight = []
+    bottomRight = []
+    topLeft = []
+    bottomLeft = []
+    for item in items
+        if item.pos.x <= @xMid and item.pos.y <= @yMid
+            bottomLeft.push item
+        else if item.pos.x >= @xMid and item.pos.y <= @yMid
+            bottomRight.push item
+        else if item.pos.x <= @xMid and item.pos.y >= @yMid
+            topLeft.push item
+        else if item.pos.x >= @xMid and item.pos.y >= @yMid
+            topRight.push item
+    itemSet = [topRight, topLeft, bottomLeft, bottomRight]
+
+    count = 0
+    for peon in peons
+        findAndMoveToItem peon, itemSet[count]
+        count++
 
 totalCost = 0
 
@@ -267,9 +317,6 @@ else if not usingDefault
         this.strategies.unshift peonStrategy
         this.addedThirdPeon = true
 ###
-
-
-currentStrategy = null
 
 
 
