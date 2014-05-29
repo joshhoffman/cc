@@ -177,7 +177,8 @@ enemyGatherer = 'peon'
 if not @strategies
     peonStrategyUnits = [@gatherer]
     trashStrategyUnits = [@trash]
-    tankHealerStrategyUnits = [@tank, @healer, @trash]
+    tankHealerTrashStrategyUnits = [@tank, @healer, @trash]
+    tankHealerStrategyUnits = [@tank, @healer]
     healerStrategyUnits = [@healer]
     attackStrategyUnits = [@attack]
     attackHealerStrategyUnits = [@attack, @healer]
@@ -211,8 +212,8 @@ if not @strategies
             return @myName
 
     # defend against the rush
-    rushStrategy = new Strategy tankStrategyUnits, "rush", (lbase) ->
-        return lbase.numPeons <= 2 and lbase.numEnemies >= 2 and lbase.numFriends is 0
+    rushStrategy = new Strategy tankHealerStrategyUnits, "rush", (lbase) ->
+        return lbase.numPeons <= 2 and lbase.numEnemies >= 2
 
     # Create two peons always
     peonStrategy = new Strategy peonStrategyUnits, "peon", (lbase) ->
@@ -222,7 +223,7 @@ if not @strategies
     thirdPeonStrategy = new Strategy peonStrategyUnits, "third peon", (lbase) ->
         return (lbase.numEnemies == 0 or lbase.numEnemyPeons >= 3) and lbase.numPeons is 2
 
-    # Create a fourth peon if the enemy has four and I have less than 4
+    # Create a fourth peon if the enemy has four and I have lTrashStrategyUnitsess than 4
     fourthPeonStrategy = new Strategy peonStrategyUnits, "fourth peon", (lbase) ->
         return lbase.numEnemyPeons >= 4 and lbase.numPeons is 3
 
@@ -240,10 +241,10 @@ if not @strategies
 
     # spawn a bunch of dudes if the enemy doesn't have a ton of dudes
     trashHealerStrategy = new Strategy trashHealerStrategyUnits, "trash healer", (lbase) ->
-        return 5 < lbase.numEnemies < 9 and lbase.myTime > 75.0 and lbase.myTime < 120.0
+        return 5 < lbase.numEnemies < 9
 
     # Spawn a tank and a healer if the enemy has a small number of units
-    tankHealerStrategy = new Strategy tankHealerStrategyUnits, "tank healer", (lbase) ->
+    tankHealerTrashStrategy = new Strategy tankHealerTrashStrategyUnits, "tank healer", (lbase) ->
         return lbase.numEnemies >= 3 and lbase.numEnemies < 6
 
     # Spawn an attack unit if I already have a lot on the field
@@ -254,7 +255,7 @@ if not @strategies
     attackHealerStrategy = new Strategy attackHealerStrategyUnits, "attack healer", (lbase) ->
         return lbase.numFriends >= 8
 
-    #@strategies.push rushStrategy
+    @strategies.push rushStrategy
     @strategies.push peonStrategy
     @strategies.push thirdPeonStrategy
     @strategies.push fourthPeonStrategy
@@ -263,7 +264,7 @@ if not @strategies
     @strategies.push attackHealerStrategy
     @strategies.push attackStrategy
     @strategies.push trashHealerStrategy
-    @strategies.push tankHealerStrategy
+    @strategies.push tankHealerTrashStrategy
     @strategies.push doubleTrashStrategy
 
 
