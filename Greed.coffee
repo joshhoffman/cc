@@ -251,7 +251,7 @@ if not @strategies
 
     # Spawn two trash if the enemy has sent out a couple dudes
     doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, "double trash", (lbase) ->
-        return lbase.numPeons >= 2 and 1 < lbase.numEnemyTrash < 3 and lbase.numFriends is 0
+        return lbase.numPeons >= 2 and lbase.numEnemyTrash < 3 and lbase.numFriends is 0
 
     # defend against spamming tanks
     tankSpamDefenseStrategy = new Strategy tankHealerStrategyUnits, "tank spam defense", (lbase) ->
