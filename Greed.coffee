@@ -5,15 +5,51 @@
 // Check out the green Guide button at the top for more info.
 ###
 
-# -----------------------------------
-# CODE IS COMPILED FROM COFFEESCRIPT
-# -----------------------------------
+###
+-----------------------------------
+ CODE IS COMPILED FROM COFFEESCRIPT
+-----------------------------------
+###
 
 # TODO: Check the closest coin location for enemy peons. If one of my peons is closer
 #  send him after that coin to block the enemy from picking it up
 
 base = this
 base.myTime = base.now()
+
+
+
+
+
+# Set up some constants
+if not @strategies
+    @xMid = 42
+    @yMid = 32
+
+    ogres = false
+    if ogres is true
+        @gatherer = 'peon'
+        @healer = 'shaman'
+        @tank = 'ogre'
+        @trash = 'munchkin'
+        @attack = 'fangrider'
+
+        @enemyGatherer = 'peasant'
+        @enemyTrash = 'soldier'
+    else
+        @gatherer = 'peasant'
+        @healer = 'librarian'
+        @tank = 'knight'
+        @trash = 'soldier'
+        @attack = 'griffin-rider'
+
+        @enemyGatherer = 'peon'
+        @enemyTrash = 'munchkin'
+
+
+
+
+
 
 removeFromArray = (obj, arr) ->
     count = 0
@@ -24,6 +60,24 @@ removeFromArray = (obj, arr) ->
             count++
             #break
     return @arr
+
+getTargeted = (gatherers, item) ->
+    for gatherer in gatherers
+        if gatherer.targetPos?
+            if gatherer.targetPos.x is item.pos.x
+                if gatherer.targetPos.y is item.pos.y
+                    return gatherer
+    return null
+
+pruneItems = (myGatherers, enemyGatherers, itemsToSearch) ->
+    ret = []
+    for item in itemsToSearch
+        targeted = getTargeted(enemyGatherers, item)
+        for myGatherer in myGatherers
+            if not targeted? or targeted.distance(item) > myGatherer.distance(item)
+                #if item.bountyGold > 1
+                ret.push item
+    return ret
 
 # This function is cleaner than the old way, but it seems to crash the editor
 ###
@@ -40,26 +94,29 @@ getUnitByType = (unitType, unitsToSearch) ->
     return ret
 
 
-getTargeted = (gatherers, item) ->
-    for gatherer in gatherers
-        if gatherer.targetPos?
-            if gatherer.targetPos.x is item.pos.x
-                if gatherer.targetPos.y is item.pos.y
-                    return gatherer
-    return null
+
+
+# Setup counts
+items = base.getItems()
+peons = base.getByType @gatherer
+enemyPeons = base.getByType @enemyGatherer
+enemies = base.getEnemies()
+friends = base.getFriends()
+
+items = pruneItems peons, enemyPeons, items
+
+base.numPeons = peons.length
+base.numEnemyPeons = enemyPeons.length
+
+base.numFriends = friends.length - base.numPeons
+base.numEnemies = enemies.length - base.numEnemyPeons
+
+
+
+
 
 isTargeted = (gatherers, item) ->
     return getTargeted(gatherers, item) is not null
-
-pruneItems = (myGatherers, enemyGatherers, itemsToSearch) ->
-    ret = []
-    for item in itemsToSearch
-        for myGatherer in myGatherers
-            targeted = getTargeted(enemyGatherers, item)
-            if not targeted? or targeted.distance(item) > myGatherer.distance(item)
-                #if item.bountyGold > 1
-                ret.push item
-    return ret
 
 findClosestUnit = (targetUnit, unitsToSearch) ->
     min = 9001
@@ -95,52 +152,13 @@ getStrategy = (strats) ->
             # if we have a strategy we need to use, but not enough gold
             # then stop searching
             if base.gold >= totalCost
-                #base.say s.getMyName()
+                base.say s.getMyName()
                 ret = s.getUnitArray()
             break
     return ret
 
 aboveOrBelow = (item) ->
     return sign((85)*(item.pos.y) - (75)*(item.pos.x))
-
-# Set up some constants
-if not @strategies
-    @xMid = 42
-    @yMid = 32
-
-    ogres = false
-    if ogres is true
-        @gatherer = 'peon'
-        @healer = 'shaman'
-        @tank = 'ogre'
-        @trash = 'munchkin'
-        @attack = 'fangrider'
-
-        @enemyGatherer = 'peasant'
-        @enemyTrash = 'soldier'
-    else
-        @gatherer = 'peasant'
-        @healer = 'librarian'
-        @tank = 'knight'
-        @trash = 'soldier'
-        @attack = 'griffin-rider'
-
-        @enemyGatherer = 'peon'
-        @enemyTrash = 'munchkin'
-
-items = base.getItems()
-peons = base.getByType @gatherer
-enemyPeons = base.getByType @enemyGatherer
-enemies = base.getEnemies()
-friends = base.getFriends()
-
-items = pruneItems peons, enemyPeons, items
-
-base.numPeons = peons.length
-base.numEnemyPeons = enemyPeons.length
-
-base.numFriends = friends.length - base.numPeons
-base.numEnemies = enemies.length - base.numEnemyPeons
 
 ###
 var gatherer = 'peasant';
@@ -175,8 +193,8 @@ if not @strategies
         @trash, @trash, @trash,
         @trash, @trash, @attack,
         @healer, @healer, @healer
-        @healer, @healer, @healer
     ]
+    tankStrategyUnits = [@tank]
 
     @strategies = []
 
@@ -192,27 +210,51 @@ if not @strategies
         getMyName: () ->
             return @myName
 
+    # defend against the rush
+    rushStrategy = new Strategy tankStrategyUnits, "rush", (lbase) ->
+        return lbase.numPeons <= 2 and lbase.numEnemies >= 2 and lbase.numFriends is 0
+
+    # Create two peons always
     peonStrategy = new Strategy peonStrategyUnits, "peon", (lbase) ->
         return lbase.numPeons < 2
+
+    # Create a third peon on the condition that they haven;t started spawning enemies
     thirdPeonStrategy = new Strategy peonStrategyUnits, "third peon", (lbase) ->
-        return lbase.numEnemyPeons >= 3 and lbase.numPeons < 3
+        return (lbase.numEnemies == 0 or lbase.numEnemyPeons >= 3) and lbase.numPeons is 2
+
+    # Create a fourth peon if the enemy has four and I have less than 4
     fourthPeonStrategy = new Strategy peonStrategyUnits, "fourth peon", (lbase) ->
-        return lbase.numEnemyPeons >= 4 and lbase.numPeons < 4
+        return lbase.numEnemyPeons >= 4 and lbase.numPeons is 3
+
+    # If they haven't spawned anything, and it's been a long enough time... fuck it, go all out
     ballerStrategy = new Strategy ballerStrategyUnits, "baller", (lbase) ->
-        return lbase.numEnemies is 0 and lbase.numFriends is 0 and lbase.myTime > 90.0
+        return lbase.numEnemies is 0 and lbase.numFriends is 0 and lbase.myTime > 120.0
+
+    # Spawn trash early
     trashStrategy = new Strategy trashStrategyUnits, "trash", (lbase) ->
         return lbase.numPeons >= 2
+
+    # Spawn two trash if the enemy has sent out a couple dudes
     doubleTrashStrategy = new Strategy doubleTrashStrategyUnits, "double trash", (lbase) ->
-        return lbase.numPeons >= 2 and lbase.numEnemies > 1
+        return lbase.numPeons >= 2 and 1 < lbase.numEnemies < 3 and lbase.numFriends is 0
+
+    # spawn a bunch of dudes if the enemy doesn't have a ton of dudes
     trashHealerStrategy = new Strategy trashHealerStrategyUnits, "trash healer", (lbase) ->
-        return 5 < lbase.numEnemies < 9 and lbase.myTime > 75.0 and lbase.myTime < 90.0
+        return 5 < lbase.numEnemies < 9 and lbase.myTime > 75.0 and lbase.myTime < 120.0
+
+    # Spawn a tank and a healer if the enemy has a small number of units
     tankHealerStrategy = new Strategy tankHealerStrategyUnits, "tank healer", (lbase) ->
         return lbase.numEnemies >= 3 and lbase.numEnemies < 6
+
+    # Spawn an attack unit if I already have a lot on the field
     attackStrategy = new Strategy attackStrategyUnits, "attack", (lbase) ->
         return lbase.numFriends >= 5
+
+    # Spawn an attack unit and a healer if I have a ton of dudes
     attackHealerStrategy = new Strategy attackHealerStrategyUnits, "attack healer", (lbase) ->
         return lbase.numFriends >= 8
 
+    #@strategies.push rushStrategy
     @strategies.push peonStrategy
     @strategies.push thirdPeonStrategy
     @strategies.push fourthPeonStrategy
@@ -227,7 +269,7 @@ if not @strategies
 
 if @numPeons is 1
     findAndMoveToItem peons[0], items
-else if @numPeons > 1 and @numPeons < 4
+else if @numPeons is 2
     #loop through all the items, finding top and bottom
 
     if not @myTopIndex?
@@ -262,6 +304,26 @@ else if @numPeons > 1 and @numPeons < 4
                 top = findAndMoveToItem peon, top
             else
                 bottom = findAndMoveToItem peon, bottom
+else if @numPeons is 3
+    left = []
+    mid = []
+    right = []
+
+    for item in items
+        if item.pos.x < 29
+            left.push item
+        else if item.pos.x < 58
+            mid.push item
+        else
+            right.push item
+
+    itemSet = [left, mid, right]
+
+    count = 0
+    for peon in peons
+        findAndMoveToItem peon, itemSet[count]
+        count++
+
 else #numPeons >= 4
     topRight = []
     bottomRight = []
